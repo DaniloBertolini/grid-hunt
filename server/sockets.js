@@ -1,39 +1,24 @@
-/**
- * sockets.js - Gerenciamento de Eventos Socket.IO com Sistema de Salas
- */
-
 const gameState = require('./gameState');
 
-// Armazena nickname dos jogadores conectados (fora de salas)
 const playerNicknames = {};
 
 function setupSockets(io) {
 
     io.on('connection', (socket) => {
 
-        // =========================================
-        // EVENTO: Definir Nickname (ao entrar no lobby)
-        // =========================================
         socket.on('setNickname', (nickname) => {
             const sanitized = String(nickname).trim().substring(0, 15) || 'Jogador';
             playerNicknames[socket.id] = sanitized;
 
-            // Envia lista de salas e vitórias globais
             socket.emit('roomList', gameState.listRooms());
             socket.emit('globalVictories', gameState.getGlobalVictories());
         });
 
-        // =========================================
-        // EVENTO: Listar Salas
-        // =========================================
         socket.on('listRooms', () => {
             socket.emit('roomList', gameState.listRooms());
             socket.emit('globalVictories', gameState.getGlobalVictories());
         });
 
-        // =========================================
-        // EVENTO: Criar Sala
-        // =========================================
         socket.on('createRoom', (data) => {
             const nickname = playerNicknames[socket.id] || 'Jogador';
             const roomName = String(data.name || '').trim().substring(0, 20) || `Sala de ${nickname}`;
@@ -46,11 +31,9 @@ function setupSockets(io) {
 
             const room = gameState.createRoom(roomName, socket.id, config);
 
-            // Jogador entra na sala automaticamente
             gameState.joinRoom(room.id, socket.id, nickname);
             socket.join(room.id);
 
-            // Envia estado do jogo para o jogador
             socket.emit('joinedRoom', {
                 roomId: room.id,
                 roomName: room.name,
@@ -59,13 +42,9 @@ function setupSockets(io) {
             socket.emit('gameState', gameState.getRoomGameState(room.id));
             socket.emit('scoreboard', gameState.getRoomScoreboard(room.id));
 
-            // Atualiza lista de salas para todos no lobby
             io.emit('roomList', gameState.listRooms());
         });
 
-        // =========================================
-        // EVENTO: Entrar em Sala Existente
-        // =========================================
         socket.on('joinRoom', (roomId) => {
             const nickname = playerNicknames[socket.id] || 'Jogador';
             const player = gameState.joinRoom(roomId, socket.id, nickname);
@@ -85,21 +64,15 @@ function setupSockets(io) {
                 config: room ? room.config : {}
             });
 
-            // Envia estado para o novo jogador
             socket.emit('gameState', gameState.getRoomGameState(roomId));
 
-            // Notifica todos na sala
             io.to(roomId).emit('playerJoined', player);
             io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
             io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
 
-            // Atualiza lista de salas para todos
             io.emit('roomList', gameState.listRooms());
         });
 
-        // =========================================
-        // EVENTO: Sair da Sala (voltar ao lobby)
-        // =========================================
         socket.on('leaveRoom', () => {
             const roomId = gameState.getPlayerRoomId(socket.id);
             if (!roomId) return;
@@ -115,14 +88,10 @@ function setupSockets(io) {
                 io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
             }
 
-            // Atualiza lista de salas
             io.emit('roomList', gameState.listRooms());
             socket.emit('globalVictories', gameState.getGlobalVictories());
         });
 
-        // =========================================
-        // EVENTO: Movimento do Jogador
-        // =========================================
         socket.on('move', (direction) => {
             const roomId = gameState.getPlayerRoomId(socket.id);
             if (!roomId) return;
@@ -132,7 +101,6 @@ function setupSockets(io) {
             const result = gameState.checkFoodCollision(socket.id);
 
             if (result.collected) {
-                // Notifica coleta de comida
                 io.to(roomId).emit('foodCollected', {
                     playerId: socket.id,
                     nickname: result.player.nickname,
@@ -140,7 +108,6 @@ function setupSockets(io) {
                 });
 
                 if (result.winner) {
-                    // Alguém venceu!
                     const winData = gameState.handleWin(socket.id);
 
                     if (winData) {
@@ -149,15 +116,12 @@ function setupSockets(io) {
                             totalWins: winData.wins
                         });
 
-                        // Envia vitórias globais atualizadas para todos
                         io.emit('globalVictories', gameState.getGlobalVictories());
                     }
 
-                    // Envia estado resetado
                     io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
                     io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
                 } else {
-                    // Spawna nova comida (instantâneo ou com delay)
                     const room = gameState.getPlayerRoom(socket.id);
                     if (room) {
                         if (room.config.instantFruit) {
@@ -172,13 +136,9 @@ function setupSockets(io) {
                 }
             }
 
-            // Envia estado atualizado para todos na sala
             io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
         });
 
-        // =========================================
-        // EVENTO: Desconexão do Jogador
-        // =========================================
         socket.on('disconnect', () => {
             const roomId = gameState.getPlayerRoomId(socket.id);
 

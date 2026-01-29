@@ -1,8 +1,3 @@
-/**
- * game.js - Módulo de Renderização do Jogo
- * GRID HUNT - Multiplayer Arena com Sistema de Salas
- */
-
 const Game = {
     canvas: null,
     ctx: null,
@@ -11,9 +6,8 @@ const Game = {
     animationFrameId: null,
     collectEffect: 0,
     foodPulse: 0,
-    currentScreen: 'login', // login, lobby, game
+    currentScreen: 'login',
 
-    // Cores neon
     colors: {
         background: '#0d0d1a',
         gridLines: 'rgba(0, 245, 255, 0.08)',
@@ -31,9 +25,6 @@ const Game = {
         foodRadius: 8
     },
 
-    /**
-     * Setup do formulário de login
-     */
     setupLoginForm: function () {
         const loginForm = document.getElementById('loginForm');
         const nicknameInput = document.getElementById('nicknameInput');
@@ -47,7 +38,6 @@ const Game = {
                 return;
             }
 
-            // Transição para o lobby
             const loginScreen = document.getElementById('loginScreen');
             loginScreen.style.opacity = '0';
             loginScreen.style.transition = 'opacity 0.3s ease';
@@ -65,22 +55,15 @@ const Game = {
         this.createParticles();
     },
 
-    /**
-     * Inicializa o lobby
-     */
     initLobby: function (nickname) {
-        // Conecta ao servidor
         SocketManager.connect(nickname);
 
-        // Setup do formulário de criação de sala
         this.setupCreateRoomForm();
 
-        // Setup do botão de refresh
         document.getElementById('refreshRoomsBtn').addEventListener('click', () => {
             SocketManager.refreshRooms();
         });
 
-        // Setup do toggle de delay
         const radios = document.querySelectorAll('input[name="fruitSpawn"]');
         radios.forEach(radio => {
             radio.addEventListener('change', () => {
@@ -90,9 +73,6 @@ const Game = {
         });
     },
 
-    /**
-     * Setup do formulário de criação de sala
-     */
     setupCreateRoomForm: function () {
         const form = document.getElementById('createRoomForm');
 
@@ -113,9 +93,6 @@ const Game = {
         });
     },
 
-    /**
-     * Atualiza lista de salas no lobby
-     */
     updateRoomList: function (rooms) {
         const roomList = document.getElementById('roomList');
         if (!roomList || this.currentScreen === 'game') return;
@@ -151,9 +128,6 @@ const Game = {
         roomList.innerHTML = html;
     },
 
-    /**
-     * Atualiza placar de vitórias globais
-     */
     updateVictoriesList: function (victories) {
         const victoriesList = document.getElementById('victoriesList');
         if (!victoriesList) return;
@@ -184,16 +158,10 @@ const Game = {
         victoriesList.innerHTML = html;
     },
 
-    /**
-     * Callback ao clicar em "Entrar" em uma sala
-     */
     onJoinRoom: function (roomId) {
         SocketManager.joinRoom(roomId);
     },
 
-    /**
-     * Entra na tela do jogo (vindo do lobby)
-     */
     enterGame: function (data) {
         this.currentScreen = 'game';
         this.state = null;
@@ -201,12 +169,10 @@ const Game = {
         document.getElementById('lobbyScreen').style.display = 'none';
         document.getElementById('gameScreen').style.display = 'flex';
 
-        // Atualiza info da sala no header
         document.getElementById('roomNameDisplay').textContent = data.roomName.toUpperCase();
         document.getElementById('roomGoalDisplay').textContent = `META: ${data.config.maxPoints} PTS`;
         document.getElementById('playerNickname').textContent = SocketManager.nickname.toUpperCase();
 
-        // Setup do canvas se ainda não foi feito
         if (!this.canvas) {
             this.canvas = document.getElementById('gameCanvas');
             this.ctx = this.canvas.getContext('2d');
@@ -214,7 +180,6 @@ const Game = {
             this.startRenderLoop();
         }
 
-        // Setup do botão de sair
         document.getElementById('leaveRoomBtn').onclick = () => {
             SocketManager.leaveRoom();
         };
@@ -222,9 +187,6 @@ const Game = {
         SocketManager.updateConnectionStatus(true);
     },
 
-    /**
-     * Volta ao lobby
-     */
     returnToLobby: function () {
         this.currentScreen = 'lobby';
         this.state = null;
@@ -232,28 +194,20 @@ const Game = {
         document.getElementById('gameScreen').style.display = 'none';
         document.getElementById('lobbyScreen').style.display = 'flex';
 
-        // Fecha modal de vitória se estiver aberto
         document.getElementById('winnerModal').style.display = 'none';
     },
 
-    /**
-     * Mostra modal de vitória
-     */
     showWinnerModal: function (data) {
         const modal = document.getElementById('winnerModal');
         document.getElementById('winnerName').textContent = data.nickname.toUpperCase();
         document.getElementById('winnerWins').textContent = `Total de vitórias: ${data.totalWins}`;
         modal.style.display = 'flex';
 
-        // Fecha após 4 segundos
         setTimeout(() => {
             modal.style.display = 'none';
         }, 4000);
     },
 
-    /**
-     * Cria partículas flutuantes no fundo
-     */
     createParticles: function () {
         const container = document.getElementById('particles');
         const particleCount = 30;
@@ -287,9 +241,6 @@ const Game = {
         document.head.appendChild(style);
     },
 
-    /**
-     * Atualiza estado do jogo
-     */
     updateState: function (newState) {
         if (!newState) return;
         if (this.canvas && !this.state) {
@@ -300,16 +251,10 @@ const Game = {
         this.state = newState;
     },
 
-    /**
-     * Efeito visual de coleta
-     */
     showCollectEffect: function () {
         this.collectEffect = 1;
     },
 
-    /**
-     * Listeners de teclado
-     */
     setupKeyboardListeners: function () {
         const keyMap = {
             'w': 'up', 'W': 'up',
@@ -342,9 +287,6 @@ const Game = {
         });
     },
 
-    /**
-     * Loop de renderização
-     */
     startRenderLoop: function () {
         const gameLoop = () => {
             this.render();
@@ -353,9 +295,6 @@ const Game = {
         gameLoop();
     },
 
-    /**
-     * Renderiza o jogo
-     */
     render: function () {
         if (!this.state || !this.ctx || this.currentScreen !== 'game') return;
 
@@ -386,9 +325,6 @@ const Game = {
         });
     },
 
-    /**
-     * Desenha a grade neon
-     */
     drawGrid: function (mapSize, cellSize) {
         const ctx = this.ctx;
         const canvasSize = mapSize * cellSize;
@@ -415,9 +351,6 @@ const Game = {
         }
     },
 
-    /**
-     * Desenha um jogador com efeito neon
-     */
     drawPlayer: function (player) {
         const ctx = this.ctx;
         const isCurrentPlayer = SocketManager.playerId === player.id;
@@ -459,9 +392,6 @@ const Game = {
         ctx.shadowBlur = 0;
     },
 
-    /**
-     * Desenha a comida com efeito pulsante
-     */
     drawFood: function (x, y) {
         const ctx = this.ctx;
         const pulse = Math.sin(this.foodPulse) * 0.2 + 1;
@@ -491,7 +421,6 @@ const Game = {
     }
 };
 
-// Inicialização
 window.addEventListener('DOMContentLoaded', () => {
     Game.setupLoginForm();
 });
