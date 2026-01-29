@@ -1,7 +1,6 @@
 /**
  * game.js - Módulo de Renderização do Jogo
- * GRID HUNT - Multiplayer Arena
- * Visual estilo arcade neon com efeitos de glow
+ * GRID HUNT - Multiplayer Arena com Sistema de Salas
  */
 
 const Game = {
@@ -12,21 +11,21 @@ const Game = {
     animationFrameId: null,
     collectEffect: 0,
     foodPulse: 0,
+    currentScreen: 'login', // login, lobby, game
 
     // Cores neon
     colors: {
         background: '#0d0d1a',
         gridLines: 'rgba(0, 245, 255, 0.08)',
         gridAccent: 'rgba(0, 245, 255, 0.15)',
-        playerSelf: '#00f5ff',      // Cyan neon
-        playerOther: '#ff00ff',     // Magenta neon
-        food: '#ff6b35',            // Orange neon
+        playerSelf: '#00f5ff',
+        playerOther: '#ff00ff',
+        food: '#ff6b35',
         foodGlow: 'rgba(255, 107, 53, 0.5)',
         text: '#ffffff',
         textGlow: 'rgba(255, 255, 255, 0.5)'
     },
 
-    // Configurações visuais
     config: {
         playerRadius: 12,
         foodRadius: 8
@@ -48,22 +47,208 @@ const Game = {
                 return;
             }
 
-            // Transição suave
+            // Transição para o lobby
             const loginScreen = document.getElementById('loginScreen');
             loginScreen.style.opacity = '0';
             loginScreen.style.transition = 'opacity 0.3s ease';
 
             setTimeout(() => {
                 loginScreen.style.display = 'none';
-                document.getElementById('gameScreen').style.display = 'flex';
-                this.startGame(nickname);
+                document.getElementById('lobbyScreen').style.display = 'flex';
+                document.getElementById('lobbyNickname').textContent = nickname.toUpperCase();
+                this.currentScreen = 'lobby';
+                this.initLobby(nickname);
             }, 300);
         });
 
         nicknameInput.focus();
-
-        // Criar partículas de fundo
         this.createParticles();
+    },
+
+    /**
+     * Inicializa o lobby
+     */
+    initLobby: function (nickname) {
+        // Conecta ao servidor
+        SocketManager.connect(nickname);
+
+        // Setup do formulário de criação de sala
+        this.setupCreateRoomForm();
+
+        // Setup do botão de refresh
+        document.getElementById('refreshRoomsBtn').addEventListener('click', () => {
+            SocketManager.refreshRooms();
+        });
+
+        // Setup do toggle de delay
+        const radios = document.querySelectorAll('input[name="fruitSpawn"]');
+        radios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                const delayGroup = document.getElementById('delayGroup');
+                delayGroup.style.display = radio.value === 'delayed' && radio.checked ? 'block' : 'none';
+            });
+        });
+    },
+
+    /**
+     * Setup do formulário de criação de sala
+     */
+    setupCreateRoomForm: function () {
+        const form = document.getElementById('createRoomForm');
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const name = document.getElementById('roomNameInput').value.trim();
+            const maxPoints = parseInt(document.getElementById('maxPointsInput').value) || 80;
+            const fruitSpawn = document.querySelector('input[name="fruitSpawn"]:checked').value;
+            const fruitDelay = parseInt(document.getElementById('fruitDelayInput').value) || 3;
+
+            SocketManager.createRoom({
+                name: name || undefined,
+                maxPoints: maxPoints,
+                instantFruit: fruitSpawn === 'instant',
+                fruitDelay: fruitDelay
+            });
+        });
+    },
+
+    /**
+     * Atualiza lista de salas no lobby
+     */
+    updateRoomList: function (rooms) {
+        const roomList = document.getElementById('roomList');
+        if (!roomList || this.currentScreen === 'game') return;
+
+        if (rooms.length === 0) {
+            roomList.innerHTML = `
+                <div class="empty-state">
+                    <p>Nenhuma sala disponível</p>
+                    <p class="empty-hint">Crie uma sala para começar!</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        rooms.forEach(room => {
+            const fruitInfo = room.instantFruit ? 'Instantâneo' : `Delay ${room.fruitDelay}s`;
+            html += `
+                <div class="room-item" data-room-id="${room.id}">
+                    <div class="room-item-info">
+                        <span class="room-item-name">${room.name}</span>
+                        <div class="room-item-details">
+                            <span class="room-detail">👥 ${room.playerCount}</span>
+                            <span class="room-detail">🎯 ${room.maxPoints} pts</span>
+                            <span class="room-detail">🍎 ${fruitInfo}</span>
+                        </div>
+                    </div>
+                    <button class="join-btn" onclick="Game.onJoinRoom('${room.id}')">ENTRAR</button>
+                </div>
+            `;
+        });
+
+        roomList.innerHTML = html;
+    },
+
+    /**
+     * Atualiza placar de vitórias globais
+     */
+    updateVictoriesList: function (victories) {
+        const victoriesList = document.getElementById('victoriesList');
+        if (!victoriesList) return;
+
+        if (victories.length === 0) {
+            victoriesList.innerHTML = `
+                <div class="empty-state">
+                    <p>Nenhuma vitória ainda</p>
+                    <p class="empty-hint">Seja o primeiro campeão!</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        victories.forEach((entry, index) => {
+            const medalColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
+            const medalColor = medalColors[index] || 'var(--text-muted)';
+            html += `
+                <div class="victory-item">
+                    <span class="victory-rank" style="color: ${medalColor}">#${index + 1}</span>
+                    <span class="victory-name">${entry.nickname}</span>
+                    <span class="victory-wins">${entry.wins} ${entry.wins === 1 ? 'vitória' : 'vitórias'}</span>
+                </div>
+            `;
+        });
+
+        victoriesList.innerHTML = html;
+    },
+
+    /**
+     * Callback ao clicar em "Entrar" em uma sala
+     */
+    onJoinRoom: function (roomId) {
+        SocketManager.joinRoom(roomId);
+    },
+
+    /**
+     * Entra na tela do jogo (vindo do lobby)
+     */
+    enterGame: function (data) {
+        this.currentScreen = 'game';
+        this.state = null;
+
+        document.getElementById('lobbyScreen').style.display = 'none';
+        document.getElementById('gameScreen').style.display = 'flex';
+
+        // Atualiza info da sala no header
+        document.getElementById('roomNameDisplay').textContent = data.roomName.toUpperCase();
+        document.getElementById('roomGoalDisplay').textContent = `META: ${data.config.maxPoints} PTS`;
+        document.getElementById('playerNickname').textContent = SocketManager.nickname.toUpperCase();
+
+        // Setup do canvas se ainda não foi feito
+        if (!this.canvas) {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.setupKeyboardListeners();
+            this.startRenderLoop();
+        }
+
+        // Setup do botão de sair
+        document.getElementById('leaveRoomBtn').onclick = () => {
+            SocketManager.leaveRoom();
+        };
+
+        SocketManager.updateConnectionStatus(true);
+    },
+
+    /**
+     * Volta ao lobby
+     */
+    returnToLobby: function () {
+        this.currentScreen = 'lobby';
+        this.state = null;
+
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('lobbyScreen').style.display = 'flex';
+
+        // Fecha modal de vitória se estiver aberto
+        document.getElementById('winnerModal').style.display = 'none';
+    },
+
+    /**
+     * Mostra modal de vitória
+     */
+    showWinnerModal: function (data) {
+        const modal = document.getElementById('winnerModal');
+        document.getElementById('winnerName').textContent = data.nickname.toUpperCase();
+        document.getElementById('winnerWins').textContent = `Total de vitórias: ${data.totalWins}`;
+        modal.style.display = 'flex';
+
+        // Fecha após 4 segundos
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 4000);
     },
 
     /**
@@ -90,7 +275,6 @@ const Game = {
             container.appendChild(particle);
         }
 
-        // Adiciona keyframe de animação
         const style = document.createElement('style');
         style.textContent = `
             @keyframes floatParticle {
@@ -104,22 +288,11 @@ const Game = {
     },
 
     /**
-     * Inicia o jogo
-     */
-    startGame: function (nickname) {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-
-        this.setupKeyboardListeners();
-        SocketManager.connect(nickname);
-        this.startRenderLoop();
-    },
-
-    /**
      * Atualiza estado do jogo
      */
     updateState: function (newState) {
-        if (!this.state && newState) {
+        if (!newState) return;
+        if (this.canvas && !this.state) {
             const canvasSize = newState.mapSize * newState.cellSize;
             this.canvas.width = canvasSize;
             this.canvas.height = canvasSize;
@@ -150,6 +323,7 @@ const Game = {
         };
 
         document.addEventListener('keydown', (event) => {
+            if (this.currentScreen !== 'game') return;
             const direction = keyMap[event.key];
             if (direction) {
                 event.preventDefault();
@@ -183,36 +357,30 @@ const Game = {
      * Renderiza o jogo
      */
     render: function () {
-        if (!this.state || !this.ctx) return;
+        if (!this.state || !this.ctx || this.currentScreen !== 'game') return;
 
         const ctx = this.ctx;
         const { mapSize, cellSize, players, food } = this.state;
 
-        // Atualiza animações
         this.foodPulse += 0.05;
         if (this.collectEffect > 0) {
             this.collectEffect -= 0.02;
         }
 
-        // Limpa o canvas
         ctx.fillStyle = this.colors.background;
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Efeito de flash na coleta
         if (this.collectEffect > 0) {
             ctx.fillStyle = `rgba(0, 245, 255, ${this.collectEffect * 0.1})`;
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
-        // Desenha a grade
         this.drawGrid(mapSize, cellSize);
 
-        // Desenha comida
         if (food) {
             this.drawFood(food.x, food.y);
         }
 
-        // Desenha jogadores
         Object.values(players).forEach((player) => {
             this.drawPlayer(player);
         });
@@ -225,12 +393,10 @@ const Game = {
         const ctx = this.ctx;
         const canvasSize = mapSize * cellSize;
 
-        // Linhas principais
         ctx.strokeStyle = this.colors.gridLines;
         ctx.lineWidth = 1;
 
         for (let i = 0; i <= mapSize; i++) {
-            // Linhas mais brilhantes a cada 5 células
             if (i % 5 === 0) {
                 ctx.strokeStyle = this.colors.gridAccent;
             } else {
@@ -257,7 +423,6 @@ const Game = {
         const isCurrentPlayer = SocketManager.playerId === player.id;
         const color = isCurrentPlayer ? this.colors.playerSelf : this.colors.playerOther;
 
-        // Glow externo
         const gradient = ctx.createRadialGradient(
             player.x, player.y, 0,
             player.x, player.y, this.config.playerRadius * 2.5
@@ -270,7 +435,6 @@ const Game = {
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Círculo principal
         ctx.beginPath();
         ctx.arc(player.x, player.y, this.config.playerRadius, 0, Math.PI * 2);
         ctx.fillStyle = color;
@@ -279,14 +443,12 @@ const Game = {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Borda interna brilhante
         ctx.beginPath();
         ctx.arc(player.x, player.y, this.config.playerRadius - 3, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Nickname acima
         const nickname = player.nickname || 'Player';
         ctx.fillStyle = this.colors.text;
         ctx.font = 'bold 10px Orbitron, monospace';
@@ -305,7 +467,6 @@ const Game = {
         const pulse = Math.sin(this.foodPulse) * 0.2 + 1;
         const radius = this.config.foodRadius * pulse;
 
-        // Glow pulsante
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
         gradient.addColorStop(0, this.colors.foodGlow);
         gradient.addColorStop(1, 'transparent');
@@ -315,7 +476,6 @@ const Game = {
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Círculo principal
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fillStyle = this.colors.food;
@@ -324,7 +484,6 @@ const Game = {
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Brilho interno
         ctx.beginPath();
         ctx.arc(x - 2, y - 2, radius / 2, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';

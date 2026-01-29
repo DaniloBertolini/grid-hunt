@@ -463,6 +463,360 @@ kbd {
 }
 
 /* =========================================
+   LOBBY SCREEN
+   ========================================= */
+.lobby-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    padding: 0;
+    overflow-y: auto;
+}
+
+.lobby-wrapper {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.lobby-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.15);
+}
+
+.lobby-content {
+    display: flex;
+    gap: var(--space-xl);
+    flex: 1;
+}
+
+.lobby-rooms {
+    flex: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.lobby-victories {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.lobby-panel {
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-medium) 100%);
+    border: 1px solid rgba(0, 245, 255, 0.15);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* Room list */
+.room-list {
+    padding: var(--space-md);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.room-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.room-list::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+.room-list::-webkit-scrollbar-thumb {
+    background: var(--neon-cyan);
+    border-radius: 2px;
+}
+
+.room-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-sm);
+    background: var(--bg-dark);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+}
+
+.room-item:hover {
+    border-color: rgba(0, 245, 255, 0.3);
+    background: var(--bg-medium);
+}
+
+.room-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.room-item-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.room-item-details {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.room-detail {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.join-btn {
+    padding: var(--space-sm) var(--space-lg);
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--bg-deep);
+    background: linear-gradient(135deg, var(--neon-cyan) 0%, var(--neon-green) 100%);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.join-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--glow-soft) var(--neon-cyan);
+}
+
+.refresh-btn {
+    margin-left: auto;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    background: transparent;
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.refresh-btn:hover {
+    background: rgba(0, 245, 255, 0.1);
+    border-color: var(--neon-cyan);
+}
+
+/* Create room form */
+.create-room-form {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.form-label {
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    color: var(--neon-cyan);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.form-input {
+    width: 100%;
+    padding: var(--space-md);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-dark);
+    border: 1px solid var(--bg-light);
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-input::placeholder {
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.form-input:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.1);
+}
+
+.form-input[type="number"] {
+    text-align: center;
+}
+
+.toggle-group {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.toggle-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.toggle-option input[type="radio"] {
+    display: none;
+}
+
+.toggle-label {
+    display: block;
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    background: var(--bg-dark);
+    border: 1px solid var(--bg-light);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.toggle-option input[type="radio"]:checked + .toggle-label {
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+    background: rgba(0, 245, 255, 0.1);
+    box-shadow: var(--glow-soft) rgba(0, 245, 255, 0.2);
+}
+
+.create-btn {
+    width: 100%;
+    padding: var(--space-md) var(--space-xl);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--bg-deep);
+    background: linear-gradient(135deg, var(--neon-magenta) 0%, var(--neon-orange) 100%);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: var(--space-sm);
+}
+
+.create-btn:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        var(--glow-medium) var(--neon-magenta),
+        var(--glow-strong) var(--neon-orange);
+}
+
+.create-btn:active {
+    transform: translateY(0);
+}
+
+/* Victories list */
+.victories-list {
+    padding: var(--space-md);
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.victories-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.victories-list::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+.victories-list::-webkit-scrollbar-thumb {
+    background: var(--neon-yellow);
+    border-radius: 2px;
+}
+
+.victory-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    background: var(--bg-dark);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.victory-item:hover {
+    border-color: rgba(255, 255, 0, 0.2);
+    background: var(--bg-medium);
+}
+
+.victory-rank {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 900;
+    min-width: 30px;
+}
+
+.victory-name {
+    flex: 1;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.victory-wins {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 900;
+    color: var(--neon-yellow);
+    text-shadow: var(--glow-soft) var(--neon-yellow);
+    white-space: nowrap;
+}
+
+.empty-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* =========================================
    GAME SCREEN
    ========================================= */
 .game-screen {
@@ -481,6 +835,39 @@ kbd {
     padding: var(--space-md) var(--space-xl);
     background: linear-gradient(180deg, var(--bg-dark) 0%, transparent 100%);
     border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+    gap: var(--space-md);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.leave-btn {
+    padding: var(--space-sm) var(--space-md);
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--neon-orange);
+    background: transparent;
+    border: 1px solid var(--neon-orange);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.leave-btn:hover {
+    background: rgba(255, 107, 53, 0.15);
+    box-shadow: var(--glow-soft) var(--neon-orange);
 }
 
 .header-logo {
@@ -493,6 +880,37 @@ kbd {
 
 .header-logo span {
     color: var(--neon-magenta);
+}
+
+.room-info-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--bg-card);
+    border: 1px solid rgba(0, 245, 255, 0.2);
+    border-radius: var(--radius-md);
+}
+
+.room-name-display {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+}
+
+.room-separator {
+    color: var(--text-muted);
+}
+
+.room-goal-display {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--neon-yellow);
+    letter-spacing: 0.05em;
+    text-shadow: var(--glow-soft) var(--neon-yellow);
 }
 
 .player-info {
@@ -788,6 +1206,94 @@ kbd {
 }
 
 /* =========================================
+   WINNER MODAL
+   ========================================= */
+.winner-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.8);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.winner-content {
+    text-align: center;
+    padding: var(--space-2xl) 4rem;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-medium) 100%);
+    border: 2px solid var(--neon-yellow);
+    border-radius: var(--radius-lg);
+    box-shadow:
+        var(--glow-medium) var(--neon-yellow),
+        var(--glow-strong) rgba(255, 255, 0, 0.3),
+        0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: winnerPop 0.5s ease-out;
+}
+
+@keyframes winnerPop {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    60% {
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.winner-trophy {
+    font-size: 4rem;
+    margin-bottom: var(--space-md);
+    animation: float 2s ease-in-out infinite;
+}
+
+.winner-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--neon-yellow);
+    letter-spacing: 0.2em;
+    text-shadow:
+        var(--glow-soft) var(--neon-yellow),
+        var(--glow-medium) var(--neon-yellow);
+    margin-bottom: var(--space-md);
+}
+
+.winner-name {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    letter-spacing: 0.1em;
+    text-shadow: var(--glow-soft) var(--neon-cyan);
+    margin-bottom: var(--space-sm);
+}
+
+.winner-wins {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+    margin-bottom: var(--space-lg);
+}
+
+.winner-subtitle {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+/* =========================================
    RESPONSIVE DESIGN
    ========================================= */
 @media (max-width: 900px) {
@@ -807,6 +1313,19 @@ kbd {
     .legend-container {
         flex: 1;
         min-width: 250px;
+    }
+
+    .lobby-content {
+        flex-direction: column;
+    }
+
+    .lobby-victories {
+        width: 100%;
+    }
+
+    .game-header {
+        flex-wrap: wrap;
+        gap: var(--space-sm);
     }
 }
 
@@ -845,6 +1364,29 @@ kbd {
 
     .corner-decor {
         display: none;
+    }
+
+    .lobby-wrapper {
+        padding: var(--space-md);
+    }
+
+    .room-info-bar {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--space-sm);
+    }
+
+    .winner-content {
+        padding: var(--space-xl) var(--space-xl);
+        margin: var(--space-md);
+    }
+
+    .winner-title {
+        font-size: 1.5rem;
+    }
+
+    .winner-name {
+        font-size: 1.2rem;
     }
 }
 

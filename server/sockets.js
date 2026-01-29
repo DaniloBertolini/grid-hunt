@@ -1,100 +1,202 @@
 /**
- * sockets.js - Gerenciamento de Eventos Socket.IO
- *
- * Este módulo configura todos os eventos de comunicação em tempo real
- * entre o servidor e os clientes conectados.
+ * sockets.js - Gerenciamento de Eventos Socket.IO com Sistema de Salas
  */
 
 const gameState = require('./gameState');
 
-/**
- * Configura os eventos do Socket.IO
- * @param {object} io - Instância do Socket.IO Server
- */
-function setupSockets(io) {
-    // Gera a primeira comida quando o servidor inicia
-    gameState.spawnFood();
+// Armazena nickname dos jogadores conectados (fora de salas)
+const playerNicknames = {};
 
-    // Evento disparado quando um novo cliente se conecta
+function setupSockets(io) {
+
     io.on('connection', (socket) => {
 
-        // Adiciona o jogador ao estado do jogo (nickname será definido depois)
-        gameState.addPlayer(socket.id);
-
-        // Envia o estado inicial do jogo para o novo jogador
-        socket.emit('gameState', gameState.getGameState());
-
         // =========================================
-        // EVENTO: Definir Nickname
+        // EVENTO: Definir Nickname (ao entrar no lobby)
         // =========================================
         socket.on('setNickname', (nickname) => {
-            // Valida e sanitiza o nickname
-            const sanitizedNickname = String(nickname).trim().substring(0, 15) || 'Jogador';
+            const sanitized = String(nickname).trim().substring(0, 15) || 'Jogador';
+            playerNicknames[socket.id] = sanitized;
 
-            gameState.setPlayerNickname(socket.id, sanitizedNickname);
+            // Envia lista de salas e vitórias globais
+            socket.emit('roomList', gameState.listRooms());
+            socket.emit('globalVictories', gameState.getGlobalVictories());
+        });
 
-            // Notifica todos os jogadores sobre o novo jogador
-            io.emit('playerJoined', gameState.getGameState().players[socket.id]);
+        // =========================================
+        // EVENTO: Listar Salas
+        // =========================================
+        socket.on('listRooms', () => {
+            socket.emit('roomList', gameState.listRooms());
+            socket.emit('globalVictories', gameState.getGlobalVictories());
+        });
 
-            // Envia o placar atualizado para todos
-            io.emit('scoreboard', gameState.getScoreboard());
+        // =========================================
+        // EVENTO: Criar Sala
+        // =========================================
+        socket.on('createRoom', (data) => {
+            const nickname = playerNicknames[socket.id] || 'Jogador';
+            const roomName = String(data.name || '').trim().substring(0, 20) || `Sala de ${nickname}`;
 
-            // Envia o estado atualizado para todos
-            io.emit('gameState', gameState.getGameState());
+            const config = {
+                maxPoints: Math.min(Math.max(parseInt(data.maxPoints) || 80, 5), 500),
+                instantFruit: data.instantFruit !== undefined ? data.instantFruit : true,
+                fruitDelay: Math.min(Math.max(parseInt(data.fruitDelay) || 3, 1), 30)
+            };
+
+            const room = gameState.createRoom(roomName, socket.id, config);
+
+            // Jogador entra na sala automaticamente
+            gameState.joinRoom(room.id, socket.id, nickname);
+            socket.join(room.id);
+
+            // Envia estado do jogo para o jogador
+            socket.emit('joinedRoom', {
+                roomId: room.id,
+                roomName: room.name,
+                config: room.config
+            });
+            socket.emit('gameState', gameState.getRoomGameState(room.id));
+            socket.emit('scoreboard', gameState.getRoomScoreboard(room.id));
+
+            // Atualiza lista de salas para todos no lobby
+            io.emit('roomList', gameState.listRooms());
+        });
+
+        // =========================================
+        // EVENTO: Entrar em Sala Existente
+        // =========================================
+        socket.on('joinRoom', (roomId) => {
+            const nickname = playerNicknames[socket.id] || 'Jogador';
+            const player = gameState.joinRoom(roomId, socket.id, nickname);
+
+            if (!player) {
+                socket.emit('roomError', 'Sala não encontrada');
+                return;
+            }
+
+            socket.join(roomId);
+
+            const room = gameState.getPlayerRoom(socket.id);
+
+            socket.emit('joinedRoom', {
+                roomId: roomId,
+                roomName: room ? room.name : '',
+                config: room ? room.config : {}
+            });
+
+            // Envia estado para o novo jogador
+            socket.emit('gameState', gameState.getRoomGameState(roomId));
+
+            // Notifica todos na sala
+            io.to(roomId).emit('playerJoined', player);
+            io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
+            io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
+
+            // Atualiza lista de salas para todos
+            io.emit('roomList', gameState.listRooms());
+        });
+
+        // =========================================
+        // EVENTO: Sair da Sala (voltar ao lobby)
+        // =========================================
+        socket.on('leaveRoom', () => {
+            const roomId = gameState.getPlayerRoomId(socket.id);
+            if (!roomId) return;
+
+            const result = gameState.leaveRoom(socket.id);
+            socket.leave(roomId);
+
+            socket.emit('leftRoom');
+
+            if (result && !result.deleted) {
+                io.to(roomId).emit('playerLeft', socket.id);
+                io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
+                io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
+            }
+
+            // Atualiza lista de salas
+            io.emit('roomList', gameState.listRooms());
+            socket.emit('globalVictories', gameState.getGlobalVictories());
         });
 
         // =========================================
         // EVENTO: Movimento do Jogador
         // =========================================
         socket.on('move', (direction) => {
-            // Atualiza a posição do jogador no estado do jogo
+            const roomId = gameState.getPlayerRoomId(socket.id);
+            if (!roomId) return;
+
             gameState.movePlayer(socket.id, direction);
 
-            // Verifica se o jogador coletou a comida
-            const collectedFood = gameState.checkFoodCollision(socket.id);
+            const result = gameState.checkFoodCollision(socket.id);
 
-            if (collectedFood) {
-                // Notifica todos sobre a coleta de comida
-                const player = gameState.getGameState().players[socket.id];
-                io.emit('foodCollected', {
+            if (result.collected) {
+                // Notifica coleta de comida
+                io.to(roomId).emit('foodCollected', {
                     playerId: socket.id,
-                    nickname: player.nickname,
-                    newScore: player.score
+                    nickname: result.player.nickname,
+                    newScore: result.player.score
                 });
 
-                // Gera nova comida imediatamente após a coleta
-                gameState.spawnFood();
-                io.emit('foodSpawned', gameState.getGameState().food);
+                if (result.winner) {
+                    // Alguém venceu!
+                    const winData = gameState.handleWin(socket.id);
 
-                // Atualiza o placar para todos
-                io.emit('scoreboard', gameState.getScoreboard());
+                    if (winData) {
+                        io.to(roomId).emit('gameWinner', {
+                            nickname: winData.winnerNickname,
+                            totalWins: winData.wins
+                        });
+
+                        // Envia vitórias globais atualizadas para todos
+                        io.emit('globalVictories', gameState.getGlobalVictories());
+                    }
+
+                    // Envia estado resetado
+                    io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
+                    io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
+                } else {
+                    // Spawna nova comida (instantâneo ou com delay)
+                    const room = gameState.getPlayerRoom(socket.id);
+                    if (room) {
+                        if (room.config.instantFruit) {
+                            gameState.spawnFood(roomId);
+                            io.to(roomId).emit('foodSpawned', gameState.getRoomGameState(roomId).food);
+                        } else {
+                            gameState.scheduleFood(roomId);
+                        }
+                    }
+
+                    io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
+                }
             }
 
-            // Envia o estado atualizado para todos os jogadores
-            // Nota: Em um jogo maior, seria melhor enviar apenas as mudanças
-            io.emit('gameState', gameState.getGameState());
+            // Envia estado atualizado para todos na sala
+            io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
         });
 
         // =========================================
         // EVENTO: Desconexão do Jogador
         // =========================================
         socket.on('disconnect', () => {
+            const roomId = gameState.getPlayerRoomId(socket.id);
 
-            // Remove o jogador do estado do jogo
-            gameState.removePlayer(socket.id);
+            if (roomId) {
+                const result = gameState.leaveRoom(socket.id);
 
-            // Notifica todos sobre a saída do jogador
-            io.emit('playerLeft', socket.id);
+                if (result && !result.deleted) {
+                    io.to(roomId).emit('playerLeft', socket.id);
+                    io.to(roomId).emit('scoreboard', gameState.getRoomScoreboard(roomId));
+                    io.to(roomId).emit('gameState', gameState.getRoomGameState(roomId));
+                }
 
-            // Atualiza o placar para todos
-            io.emit('scoreboard', gameState.getScoreboard());
+                io.emit('roomList', gameState.listRooms());
+            }
 
-            // Envia o estado atualizado
-            io.emit('gameState', gameState.getGameState());
+            delete playerNicknames[socket.id];
         });
     });
 }
 
-module.exports = {
-    setupSockets
-};
+module.exports = { setupSockets };

@@ -1,74 +1,126 @@
 /**
- * gameState.js - Gerenciamento do Estado do Jogo
- *
- * Este módulo é responsável por manter e manipular o estado global do jogo,
- * incluindo jogadores, comida e pontuação.
+ * gameState.js - Gerenciamento do Estado do Jogo com Sistema de Salas
  */
 
-// Configurações do mapa
-const MAP_SIZE = 20; // Mapa 20x20
-const CELL_SIZE = 30; // Tamanho de cada célula em pixels
-const FOOD_SPAWN_INTERVAL = 7000; // 7 segundos em milissegundos
+const MAP_SIZE = 20;
+const CELL_SIZE = 30;
 
-// Estado do jogo
-const gameState = {
-    players: {},  // Objeto que armazena todos os jogadores conectados
-    food: null,   // Posição atual da comida
-    mapSize: MAP_SIZE,
-    cellSize: CELL_SIZE
-};
+// Armazena todas as salas ativas
+const rooms = {};
+
+// Mapeia jogador -> sala atual
+const playerRooms = {};
+
+// Placar global de vitórias (persiste enquanto o servidor estiver rodando)
+const globalVictories = {};
+
+let roomIdCounter = 1;
 
 /**
- * Adiciona um novo jogador ao jogo
- * @param {string} id - ID único do jogador (socket.id)
- * @param {string} nickname - Nickname escolhido pelo jogador
- * @returns {object} - Objeto do jogador criado
+ * Cria uma nova sala
  */
-function addPlayer(id, nickname = 'Jogador') {
-    // Posição inicial aleatória dentro do mapa
+function createRoom(name, creatorId, config = {}) {
+    const roomId = 'room_' + roomIdCounter++;
+    const room = {
+        id: roomId,
+        name: name,
+        creatorId: creatorId,
+        players: {},
+        food: null,
+        foodTimer: null,
+        config: {
+            maxPoints: config.maxPoints || 80,
+            instantFruit: config.instantFruit !== undefined ? config.instantFruit : true,
+            fruitDelay: config.fruitDelay || 3
+        },
+        mapSize: MAP_SIZE,
+        cellSize: CELL_SIZE,
+        gameActive: true
+    };
+
+    rooms[roomId] = room;
+    return room;
+}
+
+/**
+ * Adiciona jogador a uma sala
+ */
+function joinRoom(roomId, playerId, nickname) {
+    const room = rooms[roomId];
+    if (!room) return null;
+
     const player = {
-        id: id,
+        id: playerId,
         nickname: nickname,
         x: Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2,
         y: Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2,
         score: 0
     };
 
-    gameState.players[id] = player;
+    room.players[playerId] = player;
+    playerRooms[playerId] = roomId;
+
+    // Spawna comida se não houver
+    if (!room.food) {
+        spawnFood(roomId);
+    }
+
     return player;
 }
 
 /**
- * Define o nickname de um jogador
- * @param {string} id - ID do jogador
- * @param {string} nickname - Novo nickname
+ * Remove jogador de sua sala atual
  */
-function setPlayerNickname(id, nickname) {
-    if (gameState.players[id]) {
-        gameState.players[id].nickname = nickname;
+function leaveRoom(playerId) {
+    const roomId = playerRooms[playerId];
+    if (!roomId || !rooms[roomId]) return null;
+
+    const room = rooms[roomId];
+    delete room.players[playerId];
+    delete playerRooms[playerId];
+
+    // Se a sala ficou vazia, remove ela
+    if (Object.keys(room.players).length === 0) {
+        if (room.foodTimer) {
+            clearTimeout(room.foodTimer);
+        }
+        delete rooms[roomId];
+        return { roomId, deleted: true };
     }
+
+    // Se o criador saiu, passa para outro jogador
+    if (room.creatorId === playerId) {
+        room.creatorId = Object.keys(room.players)[0];
+    }
+
+    return { roomId, deleted: false };
 }
 
 /**
- * Remove um jogador do jogo
- * @param {string} id - ID do jogador a ser removido
+ * Retorna a sala de um jogador
  */
-function removePlayer(id) {
-    if (gameState.players[id]) {
-        delete gameState.players[id];
-    }
+function getPlayerRoom(playerId) {
+    const roomId = playerRooms[playerId];
+    return roomId ? rooms[roomId] : null;
 }
 
 /**
- * Atualiza a posição de um jogador (movimento baseado em grade)
- * @param {string} id - ID do jogador
- * @param {string} direction - Direção do movimento (up, down, left, right)
+ * Retorna o ID da sala de um jogador
  */
-function movePlayer(id, direction) {
-    const player = gameState.players[id];
+function getPlayerRoomId(playerId) {
+    return playerRooms[playerId] || null;
+}
+
+/**
+ * Move jogador dentro de sua sala
+ */
+function movePlayer(playerId, direction) {
+    const room = getPlayerRoom(playerId);
+    if (!room || !room.gameActive) return;
+
+    const player = room.players[playerId];
     if (!player) return;
 
-    // Move uma célula inteira por vez
     const minPos = CELL_SIZE / 2;
     const maxPos = MAP_SIZE * CELL_SIZE - CELL_SIZE / 2;
 
@@ -89,54 +141,118 @@ function movePlayer(id, direction) {
 }
 
 /**
- * Gera comida em uma posição aleatória do mapa
+ * Gera comida em uma sala específica
  */
-function spawnFood() {
-    gameState.food = {
+function spawnFood(roomId) {
+    const room = rooms[roomId];
+    if (!room) return;
+
+    room.food = {
         x: Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2,
         y: Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2
     };
 }
 
 /**
- * Verifica se um jogador coletou a comida
- * Como o movimento é baseado em grade, basta verificar se estão na mesma célula
- * @param {string} playerId - ID do jogador
- * @returns {boolean} - true se o jogador coletou a comida
+ * Agenda o spawn de comida com delay
  */
-function checkFoodCollision(playerId) {
-    const player = gameState.players[playerId];
-    if (!player || !gameState.food) return false;
+function scheduleFood(roomId) {
+    const room = rooms[roomId];
+    if (!room) return;
 
-    // No modo grade, verifica se estão na mesma posição (mesma célula)
-    if (player.x === gameState.food.x && player.y === gameState.food.y) {
-        player.score += 1;
-        gameState.food = null; // Remove a comida
-        return true;
-    }
-
-    return false;
+    const delayMs = room.config.fruitDelay * 1000;
+    room.foodTimer = setTimeout(() => {
+        if (rooms[roomId]) {
+            spawnFood(roomId);
+        }
+    }, delayMs);
 }
 
 /**
- * Retorna o estado atual do jogo
- * @returns {object} - Estado completo do jogo
+ * Verifica colisão com comida e checa vitória
+ * Retorna: { collected: bool, winner: bool, player: obj }
  */
-function getGameState() {
+function checkFoodCollision(playerId) {
+    const room = getPlayerRoom(playerId);
+    if (!room || !room.food || !room.gameActive) return { collected: false };
+
+    const player = room.players[playerId];
+    if (!player) return { collected: false };
+
+    if (player.x === room.food.x && player.y === room.food.y) {
+        player.score += 1;
+        room.food = null;
+
+        // Verifica se o jogador venceu
+        if (player.score >= room.config.maxPoints) {
+            return { collected: true, winner: true, player };
+        }
+
+        return { collected: true, winner: false, player };
+    }
+
+    return { collected: false };
+}
+
+/**
+ * Registra vitória e reseta a sala
+ */
+function handleWin(playerId) {
+    const room = getPlayerRoom(playerId);
+    if (!room) return null;
+
+    const winner = room.players[playerId];
+    if (!winner) return null;
+
+    const winnerNickname = winner.nickname;
+
+    // Registra vitória global
+    if (!globalVictories[winnerNickname]) {
+        globalVictories[winnerNickname] = { nickname: winnerNickname, wins: 0 };
+    }
+    globalVictories[winnerNickname].wins += 1;
+
+    // Reseta todos os jogadores da sala
+    Object.values(room.players).forEach(p => {
+        p.score = 0;
+        p.x = Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2;
+        p.y = Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2;
+    });
+
+    // Spawna nova comida
+    room.food = null;
+    spawnFood(room.id);
+
     return {
-        players: gameState.players,
-        food: gameState.food,
-        mapSize: gameState.mapSize,
-        cellSize: gameState.cellSize
+        winnerNickname,
+        wins: globalVictories[winnerNickname].wins
     };
 }
 
 /**
- * Retorna o ranking dos jogadores ordenado por pontuação
- * @returns {array} - Lista de jogadores ordenada por score
+ * Retorna o estado do jogo de uma sala
  */
-function getScoreboard() {
-    return Object.values(gameState.players)
+function getRoomGameState(roomId) {
+    const room = rooms[roomId];
+    if (!room) return null;
+
+    return {
+        players: room.players,
+        food: room.food,
+        mapSize: room.mapSize,
+        cellSize: room.cellSize,
+        config: room.config
+    };
+}
+
+/**
+ * Retorna ranking de uma sala
+ */
+function getRoomScoreboard(roomId) {
+    const room = rooms[roomId];
+    if (!room) return [];
+
+    return Object.values(room.players)
         .sort((a, b) => b.score - a.score)
         .map(player => ({
             id: player.id,
@@ -145,15 +261,43 @@ function getScoreboard() {
         }));
 }
 
-// Exporta as funções e constantes para uso em outros módulos
+/**
+ * Retorna lista de salas disponíveis
+ */
+function listRooms() {
+    return Object.values(rooms).map(room => ({
+        id: room.id,
+        name: room.name,
+        playerCount: Object.keys(room.players).length,
+        maxPoints: room.config.maxPoints,
+        instantFruit: room.config.instantFruit,
+        fruitDelay: room.config.fruitDelay
+    }));
+}
+
+/**
+ * Retorna placar global de vitórias
+ */
+function getGlobalVictories() {
+    return Object.values(globalVictories)
+        .sort((a, b) => b.wins - a.wins);
+}
+
 module.exports = {
-    addPlayer,
-    removePlayer,
-    setPlayerNickname,
+    createRoom,
+    joinRoom,
+    leaveRoom,
+    getPlayerRoom,
+    getPlayerRoomId,
     movePlayer,
     spawnFood,
+    scheduleFood,
     checkFoodCollision,
-    getGameState,
-    getScoreboard,
-    FOOD_SPAWN_INTERVAL
+    handleWin,
+    getRoomGameState,
+    getRoomScoreboard,
+    listRooms,
+    getGlobalVictories,
+    MAP_SIZE,
+    CELL_SIZE
 };
