@@ -81,20 +81,134 @@
         </div>
     </div>
 
+    <!-- ========== TELA DO LOBBY ========== -->
+    <div id="lobbyScreen" class="lobby-screen" style="display: none;">
+        <div class="lobby-wrapper">
+            <!-- Header do lobby -->
+            <div class="lobby-header">
+                <h1 class="header-logo">GRID<span>HUNT</span></h1>
+                <div class="player-info">
+                    <span class="player-avatar"></span>
+                    <span id="lobbyNickname" class="player-name">---</span>
+                </div>
+            </div>
+
+            <div class="lobby-content">
+                <!-- Coluna esquerda: Salas -->
+                <div class="lobby-rooms">
+                    <div class="lobby-panel">
+                        <div class="panel-header">
+                            <span class="panel-icon">🚪</span>
+                            <h2>SALAS</h2>
+                            <button id="refreshRoomsBtn" class="refresh-btn" title="Atualizar">↻</button>
+                        </div>
+                        <div id="roomList" class="room-list">
+                            <div class="empty-state">
+                                <p>Nenhuma sala disponível</p>
+                                <p class="empty-hint">Crie uma sala para começar!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Criar sala -->
+                    <div class="lobby-panel create-room-panel">
+                        <div class="panel-header">
+                            <span class="panel-icon">➕</span>
+                            <h2>CRIAR SALA</h2>
+                        </div>
+                        <form id="createRoomForm" class="create-room-form">
+                            <div class="form-group">
+                                <label class="form-label">NOME DA SALA</label>
+                                <input
+                                    type="text"
+                                    id="roomNameInput"
+                                    placeholder="Nome da sala..."
+                                    maxlength="20"
+                                    autocomplete="off"
+                                    class="form-input"
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">PONTOS PARA VENCER</label>
+                                <input
+                                    type="number"
+                                    id="maxPointsInput"
+                                    value="80"
+                                    min="5"
+                                    max="500"
+                                    class="form-input"
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">SPAWN DE FRUTAS</label>
+                                <div class="toggle-group">
+                                    <label class="toggle-option">
+                                        <input type="radio" name="fruitSpawn" value="instant" checked>
+                                        <span class="toggle-label">INSTANTÂNEO</span>
+                                    </label>
+                                    <label class="toggle-option">
+                                        <input type="radio" name="fruitSpawn" value="delayed">
+                                        <span class="toggle-label">COM DELAY</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group delay-group" id="delayGroup" style="display: none;">
+                                <label class="form-label">DELAY (SEGUNDOS)</label>
+                                <input
+                                    type="number"
+                                    id="fruitDelayInput"
+                                    value="3"
+                                    min="1"
+                                    max="30"
+                                    class="form-input"
+                                >
+                            </div>
+                            <button type="submit" class="create-btn">
+                                <span>CRIAR SALA</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Coluna direita: Placar de vitórias -->
+                <div class="lobby-victories">
+                    <div class="lobby-panel">
+                        <div class="panel-header">
+                            <span class="panel-icon">🏆</span>
+                            <h2>HALL DA FAMA</h2>
+                        </div>
+                        <div id="victoriesList" class="victories-list">
+                            <div class="empty-state">
+                                <p>Nenhuma vitória ainda</p>
+                                <p class="empty-hint">Seja o primeiro campeão!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ========== TELA DO JOGO ========== -->
     <div id="gameScreen" class="game-screen" style="display: none;">
         <!-- Header do jogo -->
         <header class="game-header">
             <div class="header-left">
+                <button id="leaveRoomBtn" class="leave-btn" title="Voltar ao lobby">← SAIR</button>
                 <h1 class="header-logo">GRID<span>HUNT</span></h1>
             </div>
             <div class="header-center">
+                <div class="room-info-bar">
+                    <span id="roomNameDisplay" class="room-name-display">---</span>
+                    <span class="room-separator">|</span>
+                    <span id="roomGoalDisplay" class="room-goal-display">META: 80 PTS</span>
+                </div>
+            </div>
+            <div class="header-right">
                 <div class="player-info">
                     <span class="player-avatar"></span>
                     <span id="playerNickname" class="player-name">---</span>
                 </div>
-            </div>
-            <div class="header-right">
                 <div id="connectionStatus" class="connection-badge connected">
                     <span class="status-dot"></span>
                     <span class="status-text">ONLINE</span>
@@ -151,6 +265,17 @@
                 </div>
             </aside>
         </main>
+    </div>
+
+    <!-- ========== MODAL DE VITÓRIA ========== -->
+    <div id="winnerModal" class="winner-modal" style="display: none;">
+        <div class="winner-content">
+            <div class="winner-trophy">🏆</div>
+            <h2 class="winner-title">VITÓRIA!</h2>
+            <p class="winner-name" id="winnerName">---</p>
+            <p class="winner-wins" id="winnerWins">Total de vitórias: 1</p>
+            <div class="winner-subtitle">A sala será reiniciada...</div>
+        </div>
     </div>
 
     <!-- Socket.IO Client Library -->
