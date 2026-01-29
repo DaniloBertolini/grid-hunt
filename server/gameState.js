@@ -1,24 +1,14 @@
-/**
- * gameState.js - Gerenciamento do Estado do Jogo com Sistema de Salas
- */
-
 const MAP_SIZE = 20;
 const CELL_SIZE = 30;
 
-// Armazena todas as salas ativas
 const rooms = {};
 
-// Mapeia jogador -> sala atual
 const playerRooms = {};
 
-// Placar global de vitórias (persiste enquanto o servidor estiver rodando)
 const globalVictories = {};
 
 let roomIdCounter = 1;
 
-/**
- * Cria uma nova sala
- */
 function createRoom(name, creatorId, config = {}) {
     const roomId = 'room_' + roomIdCounter++;
     const room = {
@@ -42,9 +32,6 @@ function createRoom(name, creatorId, config = {}) {
     return room;
 }
 
-/**
- * Adiciona jogador a uma sala
- */
 function joinRoom(roomId, playerId, nickname) {
     const room = rooms[roomId];
     if (!room) return null;
@@ -60,7 +47,6 @@ function joinRoom(roomId, playerId, nickname) {
     room.players[playerId] = player;
     playerRooms[playerId] = roomId;
 
-    // Spawna comida se não houver
     if (!room.food) {
         spawnFood(roomId);
     }
@@ -68,9 +54,6 @@ function joinRoom(roomId, playerId, nickname) {
     return player;
 }
 
-/**
- * Remove jogador de sua sala atual
- */
 function leaveRoom(playerId) {
     const roomId = playerRooms[playerId];
     if (!roomId || !rooms[roomId]) return null;
@@ -79,7 +62,6 @@ function leaveRoom(playerId) {
     delete room.players[playerId];
     delete playerRooms[playerId];
 
-    // Se a sala ficou vazia, remove ela
     if (Object.keys(room.players).length === 0) {
         if (room.foodTimer) {
             clearTimeout(room.foodTimer);
@@ -88,7 +70,6 @@ function leaveRoom(playerId) {
         return { roomId, deleted: true };
     }
 
-    // Se o criador saiu, passa para outro jogador
     if (room.creatorId === playerId) {
         room.creatorId = Object.keys(room.players)[0];
     }
@@ -96,24 +77,15 @@ function leaveRoom(playerId) {
     return { roomId, deleted: false };
 }
 
-/**
- * Retorna a sala de um jogador
- */
 function getPlayerRoom(playerId) {
     const roomId = playerRooms[playerId];
     return roomId ? rooms[roomId] : null;
 }
 
-/**
- * Retorna o ID da sala de um jogador
- */
 function getPlayerRoomId(playerId) {
     return playerRooms[playerId] || null;
 }
 
-/**
- * Move jogador dentro de sua sala
- */
 function movePlayer(playerId, direction) {
     const room = getPlayerRoom(playerId);
     if (!room || !room.gameActive) return;
@@ -140,9 +112,6 @@ function movePlayer(playerId, direction) {
     }
 }
 
-/**
- * Gera comida em uma sala específica
- */
 function spawnFood(roomId) {
     const room = rooms[roomId];
     if (!room) return;
@@ -153,9 +122,6 @@ function spawnFood(roomId) {
     };
 }
 
-/**
- * Agenda o spawn de comida com delay
- */
 function scheduleFood(roomId) {
     const room = rooms[roomId];
     if (!room) return;
@@ -168,10 +134,6 @@ function scheduleFood(roomId) {
     }, delayMs);
 }
 
-/**
- * Verifica colisão com comida e checa vitória
- * Retorna: { collected: bool, winner: bool, player: obj }
- */
 function checkFoodCollision(playerId) {
     const room = getPlayerRoom(playerId);
     if (!room || !room.food || !room.gameActive) return { collected: false };
@@ -183,7 +145,6 @@ function checkFoodCollision(playerId) {
         player.score += 1;
         room.food = null;
 
-        // Verifica se o jogador venceu
         if (player.score >= room.config.maxPoints) {
             return { collected: true, winner: true, player };
         }
@@ -194,9 +155,6 @@ function checkFoodCollision(playerId) {
     return { collected: false };
 }
 
-/**
- * Registra vitória e reseta a sala
- */
 function handleWin(playerId) {
     const room = getPlayerRoom(playerId);
     if (!room) return null;
@@ -206,20 +164,17 @@ function handleWin(playerId) {
 
     const winnerNickname = winner.nickname;
 
-    // Registra vitória global
     if (!globalVictories[winnerNickname]) {
         globalVictories[winnerNickname] = { nickname: winnerNickname, wins: 0 };
     }
     globalVictories[winnerNickname].wins += 1;
 
-    // Reseta todos os jogadores da sala
     Object.values(room.players).forEach(p => {
         p.score = 0;
         p.x = Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2;
         p.y = Math.floor(Math.random() * MAP_SIZE) * CELL_SIZE + CELL_SIZE / 2;
     });
 
-    // Spawna nova comida
     room.food = null;
     spawnFood(room.id);
 
@@ -229,9 +184,6 @@ function handleWin(playerId) {
     };
 }
 
-/**
- * Retorna o estado do jogo de uma sala
- */
 function getRoomGameState(roomId) {
     const room = rooms[roomId];
     if (!room) return null;
@@ -245,9 +197,6 @@ function getRoomGameState(roomId) {
     };
 }
 
-/**
- * Retorna ranking de uma sala
- */
 function getRoomScoreboard(roomId) {
     const room = rooms[roomId];
     if (!room) return [];
@@ -261,9 +210,6 @@ function getRoomScoreboard(roomId) {
         }));
 }
 
-/**
- * Retorna lista de salas disponíveis
- */
 function listRooms() {
     return Object.values(rooms).map(room => ({
         id: room.id,
@@ -275,9 +221,6 @@ function listRooms() {
     }));
 }
 
-/**
- * Retorna placar global de vitórias
- */
 function getGlobalVictories() {
     return Object.values(globalVictories)
         .sort((a, b) => b.wins - a.wins);

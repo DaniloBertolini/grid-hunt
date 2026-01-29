@@ -5,25 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GRID HUNT - Multiplayer Arena</title>
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos do jogo -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Efeito de scanlines -->
     <div class="scanlines"></div>
 
-    <!-- Partículas de fundo -->
     <div class="particles" id="particles"></div>
 
-    <!-- ========== TELA DE LOGIN ========== -->
     <div id="loginScreen" class="login-screen">
         <div class="login-wrapper">
-            <!-- Logo animado -->
             <div class="logo-container">
                 <h1 class="game-logo">
                     <span class="logo-grid">GRID</span>
@@ -32,13 +26,11 @@
                 <p class="logo-tagline">MULTIPLAYER ARENA</p>
             </div>
 
-            <!-- Decoração -->
             <div class="corner-decor top-left"></div>
             <div class="corner-decor top-right"></div>
             <div class="corner-decor bottom-left"></div>
             <div class="corner-decor bottom-right"></div>
 
-            <!-- Form de entrada -->
             <div class="login-box">
                 <div class="input-wrapper">
                     <label for="nicknameInput" class="input-label">PLAYER NAME</label>
@@ -58,7 +50,6 @@
                     </form>
                 </div>
 
-                <!-- Instruções -->
                 <div class="instructions-box">
                     <div class="instruction-item">
                         <span class="key-group">
@@ -73,7 +64,6 @@
                 </div>
             </div>
 
-            <!-- Players online -->
             <div class="online-status">
                 <span class="pulse-dot"></span>
                 <span class="online-text">SERVIDOR ONLINE</span>
@@ -81,10 +71,8 @@
         </div>
     </div>
 
-    <!-- ========== TELA DO LOBBY ========== -->
     <div id="lobbyScreen" class="lobby-screen" style="display: none;">
         <div class="lobby-wrapper">
-            <!-- Header do lobby -->
             <div class="lobby-header">
                 <h1 class="header-logo">GRID<span>HUNT</span></h1>
                 <div class="player-info">
@@ -94,7 +82,6 @@
             </div>
 
             <div class="lobby-content">
-                <!-- Coluna esquerda: Salas -->
                 <div class="lobby-rooms">
                     <div class="lobby-panel">
                         <div class="panel-header">
@@ -110,7 +97,6 @@
                         </div>
                     </div>
 
-                    <!-- Criar sala -->
                     <div class="lobby-panel create-room-panel">
                         <div class="panel-header">
                             <span class="panel-icon">➕</span>
@@ -170,7 +156,6 @@
                     </div>
                 </div>
 
-                <!-- Coluna direita: Placar de vitórias -->
                 <div class="lobby-victories">
                     <div class="lobby-panel">
                         <div class="panel-header">
@@ -189,9 +174,7 @@
         </div>
     </div>
 
-    <!-- ========== TELA DO JOGO ========== -->
     <div id="gameScreen" class="game-screen" style="display: none;">
-        <!-- Header do jogo -->
         <header class="game-header">
             <div class="header-left">
                 <button id="leaveRoomBtn" class="leave-btn" title="Voltar ao lobby">← SAIR</button>
@@ -216,9 +199,7 @@
             </div>
         </header>
 
-        <!-- Container principal -->
         <main class="game-main">
-            <!-- Arena do jogo -->
             <div class="arena-container">
                 <div class="arena-frame">
                     <canvas id="gameCanvas"></canvas>
@@ -226,9 +207,7 @@
                 </div>
             </div>
 
-            <!-- Painel lateral -->
             <aside class="side-panel">
-                <!-- Placar -->
                 <div class="scoreboard-container">
                     <div class="panel-header">
                         <span class="panel-icon">🏆</span>
@@ -242,7 +221,6 @@
                     </div>
                 </div>
 
-                <!-- Legenda -->
                 <div class="legend-container">
                     <div class="panel-header">
                         <span class="panel-icon">📋</span>
@@ -267,7 +245,6 @@
         </main>
     </div>
 
-    <!-- ========== MODAL DE VITÓRIA ========== -->
     <div id="winnerModal" class="winner-modal" style="display: none;">
         <div class="winner-content">
             <div class="winner-trophy">🏆</div>
@@ -278,10 +255,8 @@
         </div>
     </div>
 
-    <!-- Socket.IO Client Library -->
     <script src="/socket.io/socket.io.js"></script>
 
-    <!-- Módulos do jogo -->
     <script src="socket.js"></script>
     <script src="game.js"></script>
 </body>
