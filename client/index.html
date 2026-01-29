@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GRID HUNT - Multiplayer Arena</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos do jogo -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Efeito de scanlines -->
+    <div class="scanlines"></div>
+
+    <!-- Partículas de fundo -->
+    <div class="particles" id="particles"></div>
+
+    <!-- ========== TELA DE LOGIN ========== -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-wrapper">
+            <!-- Logo animado -->
+            <div class="logo-container">
+                <h1 class="game-logo">
+                    <span class="logo-grid">GRID</span>
+                    <span class="logo-hunt">HUNT</span>
+                </h1>
+                <p class="logo-tagline">MULTIPLAYER ARENA</p>
+            </div>
+
+            <!-- Decoração -->
+            <div class="corner-decor top-left"></div>
+            <div class="corner-decor top-right"></div>
+            <div class="corner-decor bottom-left"></div>
+            <div class="corner-decor bottom-right"></div>
+
+            <!-- Form de entrada -->
+            <div class="login-box">
+                <div class="input-wrapper">
+                    <label for="nicknameInput" class="input-label">PLAYER NAME</label>
+                    <form id="loginForm">
+                        <input
+                            type="text"
+                            id="nicknameInput"
+                            placeholder="Digite seu nome..."
+                            maxlength="12"
+                            autocomplete="off"
+                            required
+                        >
+                        <button type="submit" class="play-btn">
+                            <span class="btn-text">INICIAR</span>
+                            <span class="btn-icon">▶</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Instruções -->
+                <div class="instructions-box">
+                    <div class="instruction-item">
+                        <span class="key-group">
+                            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+                        </span>
+                        <span class="instruction-text">MOVER</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="food-icon"></span>
+                        <span class="instruction-text">COLETAR</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Players online -->
+            <div class="online-status">
+                <span class="pulse-dot"></span>
+                <span class="online-text">SERVIDOR ONLINE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TELA DO JOGO ========== -->
+    <div id="gameScreen" class="game-screen" style="display: none;">
+        <!-- Header do jogo -->
+        <header class="game-header">
+            <div class="header-left">
+                <h1 class="header-logo">GRID<span>HUNT</span></h1>
+            </div>
+            <div class="header-center">
+                <div class="player-info">
+                    <span class="player-avatar"></span>
+                    <span id="playerNickname" class="player-name">---</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div id="connectionStatus" class="connection-badge connected">
+                    <span class="status-dot"></span>
+                    <span class="status-text">ONLINE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Container principal -->
+        <main class="game-main">
+            <!-- Arena do jogo -->
+            <div class="arena-container">
+                <div class="arena-frame">
+                    <canvas id="gameCanvas"></canvas>
+                    <div class="arena-glow"></div>
+                </div>
+            </div>
+
+            <!-- Painel lateral -->
+            <aside class="side-panel">
+                <!-- Placar -->
+                <div class="scoreboard-container">
+                    <div class="panel-header">
+                        <span class="panel-icon">🏆</span>
+                        <h2>RANKING</h2>
+                    </div>
+                    <div id="scoreList" class="score-list">
+                        <div class="empty-state">
+                            <span class="loading-spinner"></span>
+                            <p>Aguardando jogadores...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legenda -->
+                <div class="legend-container">
+                    <div class="panel-header">
+                        <span class="panel-icon">📋</span>
+                        <h2>LEGENDA</h2>
+                    </div>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-dot player-dot"></span>
+                            <span>Você</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot enemy-dot"></span>
+                            <span>Outros</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot food-dot"></span>
+                            <span>Comida (+1 pt)</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Socket.IO Client Library -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Módulos do jogo -->
+    <script src="socket.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
