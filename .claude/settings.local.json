@@ -4,7 +4,9 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(tree:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)"
     ]
   }
 }
